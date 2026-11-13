@@ -1,0 +1,10 @@
+node_modules
+dist
+.DS_Store
+.env
+.env.*
+__pycache__/
+assets/source/
+assets/previews/
+audio-listening/
+dash-cam-reference/

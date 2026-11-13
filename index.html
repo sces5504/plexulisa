@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1b1815">
+<title>Plexulisa</title>
+<style>
+  :root { --ink: #f4ead6; --dim: rgba(244, 234, 214, .62); --panel: rgba(27, 24, 21, .55); --line: rgba(244, 234, 214, .22); --glow: #ffb65c; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1815; color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif TC", "Songti TC", Georgia, serif; }
+  body { touch-action: none; user-select: none; -webkit-user-select: none; }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+  #lanterns { position: fixed; top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 2px; }
+  #lanterns i { box-sizing: content-box; width: 9px; height: 9px; padding: 0; margin: 8px 4px; border-radius: 50%; border: 1.5px solid var(--dim); transition: all .4s; position: relative; }
+  #lanterns i::after { content: ''; position: absolute; inset: -9px -5px; }
+  #lanterns i.on { background: var(--glow); border-color: var(--glow); box-shadow: 0 0 10px var(--glow); cursor: pointer; }
+  #lanterns i.on:hover { transform: scale(1.5); }
+
+  #bar { position: fixed; right: max(14px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); display: flex; gap: 8px; }
+  button { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 14px;
+    letter-spacing: .08em; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); cursor: pointer; }
+  button:hover { border-color: var(--dim); }
+  button.active { border-color: var(--glow); color: var(--glow); }
+  #btnGyro, #btnSteady { display: none; }
+  .touch #btnGyro { display: inline-block; }
+  .touch #btnSteady { display: block; position: fixed; right: max(22px, env(safe-area-inset-right)); bottom: max(26px, env(safe-area-inset-bottom));
+    width: 84px; height: 84px; font-size: 16px; }
+  .touch.outside #btnSteady { opacity: .8; }
+
+  #stick { display: none; position: fixed; width: 128px; height: 128px; margin: -64px 0 0 -64px; border-radius: 50%; border: 1px solid var(--line); background: rgba(27, 24, 21, .25); pointer-events: none; }
+  #knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px; border-radius: 50%; background: rgba(244, 234, 214, .5); }
+
+  #toast { position: fixed; left: 50%; bottom: 13%; transform: translate(-50%, 8px); padding: 9px 20px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); font-size: 15px; letter-spacing: .12em; opacity: 0; transition: all .5s; pointer-events: none; white-space: nowrap; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  #title { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; background: radial-gradient(ellipse at center, rgba(27, 24, 21, .25), rgba(27, 24, 21, .82)); transition: opacity .7s; overflow: auto; }
+  #title.hidden { opacity: 0; pointer-events: none; }
+  #card { max-width: 520px; text-align: center; }
+  h1 { font-weight: 400; font-size: clamp(40px, 9vw, 68px); letter-spacing: .14em; margin: 0 0 6px; text-wrap: balance; }
+  .sub { color: var(--dim); letter-spacing: .3em; font-size: 13px; margin-bottom: 26px; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 7px 16px; text-align: left; font-size: 14px; line-height: 1.5; margin: 0 auto 26px; width: fit-content; max-width: 100%; }
+  dt { color: var(--glow); white-space: nowrap; letter-spacing: .04em; }
+  dd { margin: 0; color: var(--ink); }
+  .touch .desk, body:not(.touch) .mob { display: none; }
+  #start { font-size: 17px; padding: 12px 44px; letter-spacing: .4em; text-indent: .4em; border-color: var(--dim); }
+  #shelfRow { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 0 0 22px; color: var(--dim); font-size: 13px; letter-spacing: .2em; }
+  #shelf { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  #shelf button { font-size: 13px; padding: 6px 14px; }
+  .note { color: var(--dim); font-size: 12.5px; margin-top: 18px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="lanterns"></div>
+<div id="bar">
+  <button id="btnGyro">體感</button>
+  <button id="btnLights" title="N">關燈</button>
+  <button id="btnView" title="V">球外</button>
+  <button id="btnHelp">？</button>
+</div>
+<button id="btnSteady">穩住</button>
+<div id="stick"><div id="knob"></div></div>
+<div id="toast"></div>
+
+<div id="title">
+  <div id="card">
+    <h1>Plexulisa</h1>
+    <div class="sub">玻璃球裡的手作世界 · <span id="globeName"></span></div>
+    <dl class="desk">
+      <dt>W A S D</dt><dd>傾斜——放開就回正；「正」會自動貼著鋼珠腳下的軌道面</dd>
+      <dt>左鍵拖曳 / 滾輪</dt><dd>轉視角、遠近</dd>
+      <dt>Shift + 左鍵拖曳</dt><dd>轉整顆球：水平自轉、前後翻</dd>
+      <dt>右鍵拖曳</dt><dd>轉整顆球：左右側滾、前後翻</dd>
+      <dt>空白鍵（按住）</dt><dd>把鋼珠貼著的面當成地板——牆也算</dd>
+      <dt>V · R · L · N</dt><dd>球內↔球外 · 回到上一盞燈 · 自動貼平 · 關燈</dd>
+      <dt>上方的圓點</dt><dd>點亮過的燈可以直接點它回去</dd>
+    </dl>
+    <dl class="mob">
+      <dt>左手拇指</dt><dd>傾斜——放開回正（或開「體感」傾斜手機）</dd>
+      <dt>右手拖曳</dt><dd>轉視角</dd>
+      <dt>雙指拖曳</dt><dd>轉整顆球</dd>
+      <dt>穩住（按住）</dt><dd>把鋼珠貼著的面當成地板</dd>
+    </dl>
+    <div id="shelfRow"><span>換一顆球</span><div id="shelf"></div></div>
+    <button id="start">開始</button>
+    <div class="note">重力永遠朝畫面下方，雪也是。<br>掉下去不算失敗——看看你落在哪裡。把球裡的燈都點亮。</div>
+  </div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
